@@ -55,21 +55,21 @@ def conv2d(input_tensor, output_depth, kernel_size):
     return output_tensor
 
 
-def conv2d_3x3(input_tensor):
+def conv2d_3x3(input_tensor, output_depth):
     with tf.variable_scope('conv2d_3x3'):
         return conv2d(input_tensor, output_depth, 3) #TODO: set the output_depth according to the originial paper.
 
 
-def conv2d_1x1(input_tensor):
+def conv2d_1x1(input_tensor, output_depth):
     with tf.variable_scope('conv2d_1x1'):
         return conv2d(input_tensor, output_depth, 1) #TODO: set the output_depth according to the original paper.
 
 
-def drop_out(input_tensor, if_training=True):
+def drop_out(input_tensor, if_training):
     with tf.varialbe_scop('drop_out'):
         if keep_prob < 1:                          #TODO: set keep_prob for drop out as a hyper parameter.
             output_tensor = tf.cond(
-                is_training,
+                if_training,
                 lambda: tf.nn.dropout(input_tensor, keep_prob),
                 lambda: input_tensor
             )
@@ -81,7 +81,7 @@ def drop_out(input_tensor, if_training=True):
 def composite_function(input_tensor, if_training=True):
     normed_tensor = batch_norm(input_tensor, if_training=if_training)
     actived_tensor = tf.nn.relu(normed_tensor, name='relu')
-    output_tensor = conv2d_3x3(actived_tensor)
+    output_tensor = conv2d_3x3(actived_tensor, output_depth)
     output_tensor = drop_out(input_tensor, if_training)
     return output_tensor
 
@@ -93,6 +93,16 @@ def avg_pool_2x2(input_tensor):
 
 def transition_layer(input_tensor, if_training=True):
     normed_tensor = batch_norm(input_tensor, if_training=if_training)
-    conv_tensor = conv2d_1x1(normed_tensor)
+    conv_tensor = conv2d_1x1(normed_tensor, output_depth)
     output_tensor = avg_pool_2x2(input_tensor)
     return output_tensor
+
+
+def bottleneck_layer(input_tensor, if_training):
+    with tf.variable_scope('avg_pool_2x2'):
+        normed_tensor = batch_norm(input_tensor, if_training=if_training)
+        actived_tensor = tf.nn.relu(normed_tensor, name='relu')
+        conv_tensor_a = conv2d_1x1(actived_tensor, 4 * growth_rate) #NOTE: according to the paper, 4 * k reduction dimension output depth
+        normed_tensor = batch_norm(conv_tensor_a, if_training=if_training)
+        actived_tensor = tf.nn.relu(normed_tensor, name='relu')
+        conv_tensor_a = conv2d_3x3(actived_tensor, growth_rate)
