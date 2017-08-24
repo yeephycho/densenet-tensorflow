@@ -1,3 +1,12 @@
+# Brief:       Train a densenet for image classification
+# Data:        24/Aug./2017
+# E-mail:      huyixuanhyx@gmail.com
+# License:     Apache 2.0
+# By:          Yeephycho @ Hong Kong
+
+# Code still under construction
+
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function

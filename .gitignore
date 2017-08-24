@@ -101,4 +101,7 @@ ENV/
 .mypy_cache/
 
 # os
-.DS_Store
+*.DS_Store
+tfrecord/
+logs/
+models/
