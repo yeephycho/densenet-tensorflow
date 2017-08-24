@@ -17,6 +17,7 @@ import os
 
 DATA_DIR = "./tfrecord"
 TRAINING_SET_SIZE = 2512
+global_step = TRAINING_SET_SIZE * 100
 BATCH_SIZE = 16
 IMAGE_SIZE = 224
 
@@ -184,16 +185,13 @@ def flower_train():
     image_batch, label_batch, filename_batch = flower_input(if_random = False, if_training = True)
 
     image_batch_placeholder = tf.placeholder(tf.float32, shape=[None, 224, 224, 3])
+    label_batch_placeholder = tf.placeholder(tf.float32, shape=[None, 5])
 
-    label_batch_placeholder = tf.placeholder(tf.float32, shape=[BATCH_SIZE, 5])
-
-
-    logits_out = flower_inference(image_batch_placeholder)
+    logits = flower_inference(image_batch_placeholder)
 #    loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=label_batch_one_hot, logits=logits_out))
-    loss = tf.losses.mean_squared_error(labels=label_batch_placeholder, predictions=logits_out)
+    loss = tf.losses.mean_squared_error(labels=label_batch_placeholder, predictions=logits)
 
 
-    train_step = tf.train.GradientDescentOptimizer(0.0005).minimize(loss)
 
     saver = tf.train.Saver()
 
@@ -210,15 +208,22 @@ def flower_train():
         summary_writer = tf.summary.FileWriter("./logs", sess.graph)
         tf.summary.scalar('loss', loss)
         sess.run(tf.global_variables_initializer())
-        #saver.restore(sess, "./models/flower.ckpt")
+        saver.restore(sess, "./models/flower.ckpt")
 
         coord = tf.train.Coordinator()
         threads = tf.train.start_queue_runners(coord=coord, sess = sess)
 
         for i in range(TRAINING_SET_SIZE * 100):
+            if(i < TRAINING_SET_SIZE * 70):
+                train_step = tf.train.GradientDescentOptimizer(0.004).minimize(loss)
+            elif(i < TRAINING_SET_SIZE * 90):
+                train_step = tf.train.GradientDescentOptimizer(0.0004).minimize(loss)
+            else:
+                train_step = tf.train.GradientDescentOptimizer(0.00004).minimize(loss)
+
             image_out, label_batch_one_hot, filename_out = sess.run([image_batch, label_batch, filename_batch])
 
-            _, infer_out, loss_out, summary = sess.run([train_step, logits_out, loss, summary_op], feed_dict={image_batch_placeholder: image_out, label_batch_placeholder: label_batch_one_hot})
+            _, infer_out, loss_out, summary = sess.run([train_step, logits, loss, summary_op], feed_dict={image_batch_placeholder: image_out, label_batch_placeholder: label_batch_one_hot})
 
             if(i%50 == 0):
                 print("batch", i)
@@ -231,59 +236,60 @@ def flower_train():
 
     return 0
 
+def main():
+    flower_train()
+
+if __name__ == '__main__':
+    main()
 
 
-
-def flower_eval():
-    image_batch_out, label_batch_out, filename_batch = flower_input(if_random = False, if_training = False)
-
-    image_batch_placeholder = tf.placeholder(tf.float32, shape=[BATCH_SIZE, 224, 224, 3])
-    image_batch = tf.reshape(image_batch_out, (BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, 3))
-
-    label_tensor_placeholder = tf.placeholder(tf.int64, shape=[BATCH_SIZE])
-    label_offset = -tf.ones([BATCH_SIZE], dtype=tf.int64, name="label_batch_offset")
-    label_batch = tf.add(label_batch_out, label_offset)
-
-    logits_out = tf.reshape(flower_inference(image_batch_placeholder), [BATCH_SIZE, 5])
-    logits_batch = tf.to_int64(tf.arg_max(logits_out, dimension = 1))
-
-    correct_prediction = tf.equal(logits_batch, label_tensor_placeholder)
-    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
-
-    saver = tf.train.Saver()
-
-    with tf.Session() as sess:
-        sess.run(tf.global_variables_initializer())
-        saver.restore(sess, "./models/flower.ckpt")
-
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord, sess = sess)
-
-        accuracy_accu = 0
-
-        for i in range(57):
-            image_out, label_out, filename_out = sess.run([image_batch, label_batch, filename_batch])
-
-            accuracy_out, logits_batch_out = sess.run([accuracy, logits_batch], feed_dict={image_batch_placeholder: image_out, label_tensor_placeholder: label_out})
-            accuracy_accu += accuracy_out
-
-            print(i)
-            print(image_out.shape)
-            print("label_out: ")
-            print(filename_out)
-            print(label_out)
-            print(logits_batch_out)
-
-        print("Accuracy: ")
-        print(accuracy_accu / 57)
-
-        coord.request_stop()
-        coord.join(threads)
-        sess.close()
-
-
-
-
-
-flower_train()
 #flower_eval()
+
+
+
+# def flower_eval():
+#     image_batch_out, label_batch_out, filename_batch = flower_input(if_random = False, if_training = False)
+#
+#     image_batch_placeholder = tf.placeholder(tf.float32, shape=[BATCH_SIZE, 224, 224, 3])
+#     image_batch = tf.reshape(image_batch_out, (BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, 3))
+#
+#     label_tensor_placeholder = tf.placeholder(tf.int64, shape=[BATCH_SIZE])
+#     label_offset = -tf.ones([BATCH_SIZE], dtype=tf.int64, name="label_batch_offset")
+#     label_batch = tf.add(label_batch_out, label_offset)
+#
+#     logits_out = tf.reshape(flower_inference(image_batch_placeholder), [BATCH_SIZE, 5])
+#     logits_batch = tf.to_int64(tf.arg_max(logits_out, dimension = 1))
+#
+#     correct_prediction = tf.equal(logits_batch, label_tensor_placeholder)
+#     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+#
+#     saver = tf.train.Saver()
+#
+#     with tf.Session() as sess:
+#         sess.run(tf.global_variables_initializer())
+#         saver.restore(sess, "./models/flower.ckpt")
+#
+#         coord = tf.train.Coordinator()
+#         threads = tf.train.start_queue_runners(coord=coord, sess = sess)
+#
+#         accuracy_accu = 0
+#
+#         for i in range(57):
+#             image_out, label_out, filename_out = sess.run([image_batch, label_batch, filename_batch])
+#
+#             accuracy_out, logits_batch_out = sess.run([accuracy, logits_batch], feed_dict={image_batch_placeholder: image_out, label_tensor_placeholder: label_out})
+#             accuracy_accu += accuracy_out
+#
+#             print(i)
+#             print(image_out.shape)
+#             print("label_out: ")
+#             print(filename_out)
+#             print(label_out)
+#             print(logits_batch_out)
+#
+#         print("Accuracy: ")
+#         print(accuracy_accu / 57)
+#
+#         coord.request_stop()
+#         coord.join(threads)
+#         sess.close()
