@@ -1,8 +1,8 @@
-# Brief:       Train a densenet for image classification
-# Data:        24/Aug./2017
-# E-mail:      huyixuanhyx@gmail.com
-# License:     Apache 2.0
-# By:          Yeephycho @ Hong Kong
+# Brief:     Train a densenet for image classification
+# Data:      24/Aug./2017
+# E-mail:    huyixuanhyx@gmail.com
+# License:   Apache 2.0
+# By:        Yeephycho @ Hong Kong
 
 # Code still under construction
 

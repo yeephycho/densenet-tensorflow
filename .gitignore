@@ -103,5 +103,5 @@ ENV/
 # os
 *.DS_Store
 tfrecord/
-logs/
+training_log/
 models/
