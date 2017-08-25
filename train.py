@@ -65,16 +65,20 @@ def flower_input(if_random = True, if_training = True):
         if(if_training):
             filenames = [os.path.join(DATA_DIR, "train.tfrecord")]
         else:
-            filenames = [os.path.join(DATA_DIR, "test.tfrecord")]
+            filenames = [os.path.join(DATA_DIR, "eval.tfrecord")]
 
         for f in filenames:
             if not tf.gfile.Exists(f):
                 raise ValueError("Failed to find file: " + f)
         filename_queue = tf.train.string_input_producer(filenames)
         image_object = read_and_decode(filename_queue)
-        distorted_image = tf.image.random_flip_left_right(image_object.image)
-        image = tf.image.per_image_standardization(distorted_image)
-    #    image = tf.image.adjust_gamma(tf.cast(image_object.image, tf.float32), gamma=1, gain=1) # Scale image to (0, 1)
+        if(if_training):
+            image = tf.image.random_flip_left_right(image_object.image)
+            #    image = tf.image.adjust_gamma(tf.cast(image_object.image, tf.float32), gamma=1, gain=1) # Scale image to (0, 1)
+            image = tf.image.per_image_standardization(image)
+        else:
+            image = tf.image.per_image_standardization(image_object.image)
+
         label = image_object.label
         filename = image_object.filename
 
@@ -184,33 +188,32 @@ def flower_inference(image_batch):
 
 
 def flower_train():
-    with tf.name_scope("training"):
-        image_batch_placeholder = tf.placeholder(tf.float32, shape=[None, 224, 224, 3])
-        label_batch_placeholder = tf.placeholder(tf.float32, shape=[None, 5])
+    image_batch_placeholder = tf.placeholder(tf.float32, shape=[None, 224, 224, 3])
+    label_batch_placeholder = tf.placeholder(tf.float32, shape=[None, 5])
 
-        image_batch, label_batch, filename_batch = flower_input(if_random = False, if_training = True)
+    image_batch, label_batch, filename_batch = flower_input(if_random = False, if_training = True)
 
-        logits = flower_inference(image_batch_placeholder)
+    logits = flower_inference(image_batch_placeholder)
 
-        #loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=label_batch_placeholder, logits=logits))
-        loss = tf.losses.mean_squared_error(labels=label_batch_placeholder, predictions=logits)
+    #loss = tf.reduce_sum(tf.nn.softmax_cross_entropy_with_logits(labels=label_batch_placeholder, logits=logits))
+    loss = tf.losses.mean_squared_error(labels=label_batch_placeholder, predictions=logits)
 
-        train_step = tf.train.GradientDescentOptimizer(0.004).minimize(loss)
+    train_step = tf.train.GradientDescentOptimizer(0.004).minimize(loss)
 
-        # create a summary for training loss
-        tf.summary.scalar('loss', loss)
+    # create a summary for training loss
+    tf.summary.scalar('loss', loss)
 
-    # with tf.name_scope("evalutation"):
-    #     image_batch_placeholder_eval = tf.placeholder(tf.float32, shape=[None, 224, 224, 3])
-    #     label_batch_placeholder_eval = tf.placeholder(tf.int64, shape=[BATCH_SIZE])
-    #
-    #     image_batch_eval, label_batch_eval, filename_batch_eval = flower_input(if_random = False, if_training = False)
-    #     label_batch_dense_eval = tf.arg_max(label_batch, dimension = 1)
-    #
-    #     logits_eval = flower_inference(image_batch_placeholder_eval)
-    #     logits_dense = tf.to_int64(tf.arg_max(logits_eval, dimension = 1))
-    #     correct_prediction = tf.equal(logits_dense, label_batch_placeholder_eval)
-    #     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+
+    image_batch_placeholder_eval = tf.placeholder(tf.float32, shape=[None, 224, 224, 3])
+    label_batch_placeholder_eval = tf.placeholder(tf.int64, shape=[BATCH_SIZE])
+
+    image_batch_eval, label_batch_eval, filename_batch_eval = flower_input(if_random = False, if_training = False)
+    label_batch_dense_eval = tf.arg_max(label_batch, dimension = 1)
+
+    logits_eval = flower_inference(image_batch_placeholder_eval)
+    logits_dense = tf.to_int64(tf.arg_max(logits_eval, dimension = 1))
+    correct_prediction = tf.equal(logits_dense, label_batch_placeholder_eval)
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
 
     # merge all summaries into a single "operation" which we can execute in a session
@@ -220,45 +223,45 @@ def flower_train():
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth=True
-    with tf.Session(config=config) as sess:
-    # with tf.Session() as sess:
-        summary_writer = tf.summary.FileWriter("./training_log", sess.graph)
+    sess = tf.Session(config=config)
+    # sess = tf.Session()
 
-        sess.run(tf.global_variables_initializer())
-        saver.restore(sess, "./models/flower.ckpt")
+    summary_writer = tf.summary.FileWriter("./log", sess.graph)
 
-        coord = tf.train.Coordinator()
-        threads = tf.train.start_queue_runners(coord=coord, sess = sess)
+    sess.run(tf.global_variables_initializer())
+    #saver.restore(sess, "./models/flower.ckpt")
 
-        check_points = int(TRAINING_SET_SIZE/BATCH_SIZE) * 4
-        for epoch in range(30):
-            for check_point in range(check_points):
-                image_batch_train, label_batch_train, filename_train = sess.run([image_batch, label_batch, filename_batch])
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(coord=coord, sess = sess)
 
-                _, training_loss, summary = sess.run([train_step, loss, summary_op],
-                                                       feed_dict={image_batch_placeholder: image_batch_train,
-                                                                  label_batch_placeholder: label_batch_train})
+    check_points = int(TRAINING_SET_SIZE/BATCH_SIZE)
+    for epoch in range(100):
+        for check_point in range(check_points):
+            image_batch_train, label_batch_train, filename_train = sess.run([image_batch, label_batch, filename_batch])
 
-                if(bool(check_point%100 == 0) & bool(check_point != 0)):
-                    print("batch: ", check_point + epoch * check_points)
-                    print("training loss: ", training_loss)
-                    summary_writer.add_summary(summary, check_point + epoch * check_points)
-                    saver.save(sess, "./models/flower.ckpt")
+            _, training_loss, summary = sess.run([train_step, loss, summary_op],
+                                                   feed_dict={image_batch_placeholder: image_batch_train,
+                                                              label_batch_placeholder: label_batch_train})
+            if(bool(check_point%50 == 0) & bool(check_point != 0)):
+                print("batch: ", check_point + epoch * check_points)
+                print("training loss: ", training_loss)
+                summary_writer.add_summary(summary, check_point + epoch * check_points)
+        saver.save(sess, "./models/flower.ckpt")
 
+        print("Evaluating")
+        accuracy_accu = 0.0
+        for i in range(int(TEST_SET_SIZE/BATCH_SIZE)):
+            _image_batch_eval, _label_batch_eval, _filename_eval = sess.run([image_batch_eval, label_batch_dense_eval, filename_batch_eval])
+            batch_accuracy = sess.run([accuracy], feed_dict={image_batch_placeholder_eval: _image_batch_eval,
+                                                             label_batch_placeholder_eval: _label_batch_eval})
+            accuracy_accu += np.asarray(batch_accuracy)
+        overall_accuracy = accuracy_accu[0]/int(TEST_SET_SIZE/BATCH_SIZE)
+        print("Evaluation accuracy: ", overall_accuracy)
+        summary_writer.add_summary(overall_accuracy, epoch * check_points)
 
-            # print("Evaluating")
-            # accuracy_accu = 0.0
-            # for i in range(int(TEST_SET_SIZE/BATCH_SIZE)):
-            #     _image_batch_eval, _label_batch_eval, _filename_eval = sess.run([image_batch_eval, label_batch_dense_eval, filename_batch_eval])
-            #     batch_accuracy = sess.run([accuracy], feed_dict={image_batch_placeholder_eval: _image_batch_eval,
-            #                                                      label_batch_placeholder_eval: _label_batch_eval})
-            #     accuracy_accu += np.asarray(batch_accuracy)
-            #
-            # print("Evaluation accuracy: ", accuracy_accu[0]/int(TEST_SET_SIZE/BATCH_SIZE))
-
-        coord.request_stop()
-        coord.join(threads)
-        sess.close()
+    coord.request_stop()
+    coord.join(threads)
+    sess.close()
     return 0
 
 

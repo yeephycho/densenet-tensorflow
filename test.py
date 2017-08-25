@@ -184,45 +184,44 @@ def flower_inference(image_batch):
 
 
 def flower_test():
-    with tf.name_scope("training"):
-        image_batch, label_batch, filename_batch = flower_input(if_random = False, if_training = False)
-        label_batch_dense = tf.arg_max(label_batch, dimension = 1)
+    image_batch, label_batch, filename_batch = flower_input(if_random = False, if_training = False)
+    label_batch_dense = tf.arg_max(label_batch, dimension = 1)
 
-        image_batch_placeholder = tf.placeholder(tf.float32, shape=[None, 224, 224, 3])
-        label_batch_placeholder = tf.placeholder(tf.int64, shape=[BATCH_SIZE])
+    image_batch_placeholder = tf.placeholder(tf.float32, shape=[None, 224, 224, 3])
+    label_batch_placeholder = tf.placeholder(tf.int64, shape=[BATCH_SIZE])
 
-        logits = tf.reshape(flower_inference(image_batch_placeholder), [BATCH_SIZE, 5])
-        logits_batch = tf.to_int64(tf.arg_max(logits, dimension = 1))
+    logits = tf.reshape(flower_inference(image_batch_placeholder), [BATCH_SIZE, 5])
+    logits_batch = tf.to_int64(tf.arg_max(logits, dimension = 1))
 
-        correct_prediction = tf.equal(logits_batch, label_batch_placeholder)
-        accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
+    correct_prediction = tf.equal(logits_batch, label_batch_placeholder)
+    accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
-        saver = tf.train.Saver()
+    saver = tf.train.Saver()
 
-        config = tf.ConfigProto()
-        config.gpu_options.allow_growth=True
-        with tf.Session(config=config) as sess:
-            sess.run(tf.global_variables_initializer())
-            saver.restore(sess, "./models/flower.ckpt")
+    config = tf.ConfigProto()
+    config.gpu_options.allow_growth=True
+    with tf.Session(config=config) as sess:
+        sess.run(tf.global_variables_initializer())
+        saver.restore(sess, "./models/flower.ckpt")
 
-            accuracy_accu = 0
+        accuracy_accu = 0
 
-            coord = tf.train.Coordinator()
-            threads = tf.train.start_queue_runners(coord=coord, sess = sess)
+        coord = tf.train.Coordinator()
+        threads = tf.train.start_queue_runners(coord=coord, sess = sess)
 
-            for i in range(int(TEST_SET_SIZE / BATCH_SIZE)):
-                image_out, label_batch_dense_out, filename_out = sess.run([image_batch, label_batch_dense, filename_batch])
-                print("label: ", label_batch_dense_out)
-                accuracy_out, infer_out = sess.run([accuracy, logits_batch], feed_dict={image_batch_placeholder: image_out, label_batch_placeholder: label_batch_dense_out})
-                accuracy_out = np.asarray(accuracy_out)
-                print("infer: ", infer_out)
-                accuracy_accu = accuracy_out + accuracy_accu
+        for i in range(int(TEST_SET_SIZE / BATCH_SIZE)):
+            image_out, label_batch_dense_out, filename_out = sess.run([image_batch, label_batch_dense, filename_batch])
+            print("label: ", label_batch_dense_out)
+            accuracy_out, infer_out = sess.run([accuracy, logits_batch], feed_dict={image_batch_placeholder: image_out, label_batch_placeholder: label_batch_dense_out})
+            accuracy_out = np.asarray(accuracy_out)
+            print("infer: ", infer_out)
+            accuracy_accu = accuracy_out + accuracy_accu
 
-            print(accuracy_accu / TEST_SET_SIZE * BATCH_SIZE)
+        print(accuracy_accu / TEST_SET_SIZE * BATCH_SIZE)
 
-            coord.request_stop()
-            coord.join(threads)
-            sess.close()
+        coord.request_stop()
+        coord.join(threads)
+        sess.close()
     return 0
 
 
@@ -324,7 +323,7 @@ if __name__ == '__main__':
 #         accuracy_accu = 0
 #
 #         for i in range(57):
-#             image_out, label_out, filename_out = sess.run([image_batch, label_batch, filename_batch])
+#             image_out, label_out, filename_out = sess.run([image_batch, latrainingbel_batch, filename_batch])
 #
 #             accuracy_out, logits_batch_out = sess.run([accuracy, logits_batch], feed_dict={image_batch_placeholder: image_out, label_tensor_placeholder: label_out})
 #             accuracy_accu += accuracy_out
