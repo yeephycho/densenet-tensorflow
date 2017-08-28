@@ -1,5 +1,5 @@
-# Brief:     Train a densenet for image classification
-# Data:      24/Aug./2017
+# Brief:     Building blocks for densenet graph
+# Data:      28/Aug./2017
 # E-mail:    huyixuanhyx@gmail.com
 # License:   Apache 2.0
 # By:        Yeephycho @ Hong Kong
@@ -13,7 +13,6 @@ from __future__ import print_function
 
 import tensorflow as tf
 import numpy as np
-
 
 growth_rate = 12
 
