@@ -53,6 +53,9 @@ python test.py
 ```
 
 Expected accuracy should be around 80%.
+![Result](https://github.com/yeephycho/densenet-tensorflow/blob/master/res/test_result.png?raw=true "Show result")
+
+
 ## Reference
 [Densely Connected Convolutional Networks](https://arxiv.org/abs/1608.06993)
 
