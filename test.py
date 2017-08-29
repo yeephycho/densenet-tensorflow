@@ -4,9 +4,6 @@
 # License:   Apache 2.0
 # By:        Yeephycho @ Hong Kong
 
-# Code still under construction
-
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -16,24 +13,24 @@ import numpy as np
 import os
 
 import net.densenet as densenet
+import net.config as config
 import data_provider.data_provider as data_provider
 
 
-DATA_DIR = "./tfrecord"
-TRAINING_SET_SIZE = 2512
-global_step = TRAINING_SET_SIZE * 100
-TEST_SET_SIZE = 908
-BATCH_SIZE = 16
-IMAGE_SIZE = 224
+
+FLAGS = tf.app.flags.FLAGS
+TEST_SET_SIZE = FLAGS.TESTING_SET_SIZE
+BATCH_SIZE = FLAGS.BATCH_SIZE
+
 
 
 def densenet_test():
-    image_batch, label_batch, filename_batch = data_provider.feed_data(if_random = False, if_training = False)
-    label_batch_dense = tf.arg_max(label_batch, dimension = 1)
-
     image_batch_placeholder = tf.placeholder(tf.float32, shape=[None, 224, 224, 3])
     label_batch_placeholder = tf.placeholder(tf.int64, shape=[BATCH_SIZE])
     if_training_placeholder = tf.placeholder(tf.bool, shape=[])
+
+    image_batch, label_batch, filename_batch = data_provider.feed_data(if_random = False, if_training = False)
+    label_batch_dense = tf.arg_max(label_batch, dimension = 1)
 
     if_training = tf.Variable(False, name='if_training')
 
@@ -43,13 +40,15 @@ def densenet_test():
     correct_prediction = tf.equal(logits_batch, label_batch_placeholder)
     accuracy = tf.reduce_mean(tf.cast(correct_prediction, tf.float32))
 
+    checkpoint = tf.train.get_checkpoint_state("./models")
     saver = tf.train.Saver()
 
     config = tf.ConfigProto()
     config.gpu_options.allow_growth=True
     with tf.Session(config=config) as sess:
         sess.run(tf.global_variables_initializer())
-        saver.restore(sess, "./models/flower.ckpt")
+        tf.logging.info("Restoring full model from checkpoint file %s",checkpoint.model_checkpoint_path)
+        saver.restore(sess, checkpoint.model_checkpoint_path)
 
         accuracy_accu = 0
 
@@ -64,6 +63,7 @@ def densenet_test():
                                                                                     if_training_placeholder: if_training})
             accuracy_out = np.asarray(accuracy_out)
             print("infer: ", infer_out)
+            print(' ')
             accuracy_accu = accuracy_out + accuracy_accu
 
         print(accuracy_accu / TEST_SET_SIZE * BATCH_SIZE)
@@ -77,6 +77,7 @@ def densenet_test():
 
 def main():
     tf.reset_default_graph()
+
     densenet_test()
 
 

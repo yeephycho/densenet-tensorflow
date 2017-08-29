@@ -1,6 +1,17 @@
-DATA_DIR = "./tfrecord"
-TRAINING_SET_SIZE = 2512
-global_step = TRAINING_SET_SIZE * 100
-TEST_SET_SIZE = 908
-BATCH_SIZE = 16
-IMAGE_SIZE = 224
+# Brief:     Test the densenet for image classification
+# Data:      24/Aug./2017
+# E-mail:    huyixuanhyx@gmail.com
+# License:   Apache 2.0
+# By:        Yeephycho @ Hong Kong
+
+import tensorflow as tf
+
+FLAGS = tf.app.flags.FLAGS
+
+tf.app.flags.DEFINE_string("train_data_path", "./tfrecord", "training data dir")
+tf.app.flags.DEFINE_string("log_dir", "./log", " the log dir")
+tf.app.flags.DEFINE_integer("TRAINING_SET_SIZE", 2512, "total image number of training set")
+tf.app.flags.DEFINE_integer("TESTING_SET_SIZE", 908, "total image number of training set")
+tf.app.flags.DEFINE_integer("BATCH_SIZE", 16, "batch size")
+tf.app.flags.DEFINE_integer("IMAGE_SIZE", 224, "image width and height")
+tf.app.flags.DEFINE_float("INIT_LEARNING_RATE", 0.001, "initial learning rate")

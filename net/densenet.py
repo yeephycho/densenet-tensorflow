@@ -4,24 +4,12 @@
 # License:   Apache 2.0
 # By:        Yeephycho @ Hong Kong
 
-# Code still under construction
-
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
 import tensorflow as tf
 import numpy as np
-
-
-
-DATA_DIR = "./tfrecord"
-TRAINING_SET_SIZE = 2512
-global_step = TRAINING_SET_SIZE * 100
-TEST_SET_SIZE = 908
-BATCH_SIZE = 16
-IMAGE_SIZE = 224
 
 
 
@@ -75,9 +63,9 @@ def batch_norm(input_tensor, if_training):
 
 
 
-def composite_function(__input_tensor, if_training):
+def composite_function(__input_tensor, growth_rate, if_training):
     __input_tensor_depth = int(__input_tensor.get_shape()[-1])
-    __conv_weights = weight_variable([3, 3, __input_tensor_depth, __input_tensor_depth])
+    __conv_weights = weight_variable([3, 3, __input_tensor_depth, growth_rate])
     __output_tensor = batch_norm(__input_tensor, if_training)
     __output_tensor = tf.nn.relu(__output_tensor)
     __output_tensor = tf.nn.conv2d(input=__output_tensor, filter=__conv_weights, strides=[1, 1, 1, 1], padding='SAME', data_format='NHWC', name='composite_3x3_s1')
@@ -101,7 +89,7 @@ def bottleneck_layer(_input_tensor, growth_rate, if_training):
     __output_tensor = batch_norm(_input_tensor, if_training)
     __output_tensor = tf.nn.relu(__output_tensor)
     __output_tensor = tf.nn.conv2d(input=__output_tensor, filter=__conv_weights, strides=[1, 1, 1, 1], padding='SAME', data_format='NHWC', name='bottleneck_1x1_s1')
-    __output_tensor = composite_function(__output_tensor, if_training) #NOTE: output/input_tensor_depth is different from input
+    __output_tensor = composite_function(__output_tensor, growth_rate, if_training) #NOTE: output/input_tensor_depth is different from input
 
     return __output_tensor
 
@@ -130,14 +118,15 @@ def dense_block(_input_tensor, growth_rate, if_training):
         _bottleneck_input_4 = tf.concat(values=[_input_tensor, _bottleneck_output_0, _bottlenect_output_1, _bottlenect_output_2, _bottlenect_output_3, _bottlenect_output_4], axis=3, name='stack4')# 224
 
     with tf.name_scope("bottleneck_5") as scope:
-        output_tensor = bottleneck_layer(_bottleneck_input_4, growth_rate, if_training)#NOTE:192 = 160 + 32
+        _bottlenect_output_5 = bottleneck_layer(_bottleneck_input_4, growth_rate, if_training)#NOTE:192 = 160 + 32
+        output_tensor = tf.concat(values=[_input_tensor, _bottleneck_output_0, _bottlenect_output_1, _bottlenect_output_2, _bottlenect_output_3, _bottlenect_output_4, _bottlenect_output_5], axis=3, name='stack5')
 
     return output_tensor
 
 
 def densenet_inference(image_batch, if_training, dropout_prob):
     with tf.name_scope('DenseNet-BC-121'):
-        _image_batch = tf.reshape(image_batch, [-1, IMAGE_SIZE, IMAGE_SIZE, 3])
+        _image_batch = tf.reshape(image_batch, [-1, 224, 224, 3])
 
         with tf.name_scope('conv2d_7x7_s2') as scope:
             _conv_weights = weight_variable([7, 7, 3, 64])
@@ -176,20 +165,20 @@ def densenet_inference(image_batch, if_training, dropout_prob):
 
 
         with tf.name_scope('fc'):
-            W_fc1 = weight_variable([128, 64])
-            b_fc1 = bias_variable([64])
+            W_fc1 = weight_variable([368, 128])
+            b_fc1 = bias_variable([128])
 
-            h_pool5_flat = tf.reshape(_output_tensor, [-1, 128])
+            h_pool5_flat = tf.reshape(_output_tensor, [-1, 368])
             h_fc1 = tf.nn.relu(tf.matmul(h_pool5_flat, W_fc1) + b_fc1)
 
             h_fc1_drop = tf.nn.dropout(h_fc1, dropout_prob)
 
-            W_fc2 = weight_variable([64, 16])
-            b_fc2 = bias_variable([16])
+            W_fc2 = weight_variable([128, 32])
+            b_fc2 = bias_variable([32])
 
             h_fc2 = tf.nn.relu(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
 
-            W_fc3 = weight_variable([16, 5])
+            W_fc3 = weight_variable([32, 5])
             b_fc3 = bias_variable([5])
 
             h_fc3 = tf.nn.relu(tf.matmul(h_fc2, W_fc3) + b_fc3)

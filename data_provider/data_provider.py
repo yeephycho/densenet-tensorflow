@@ -13,11 +13,18 @@ import tensorflow as tf
 import numpy as np
 import os
 
+import sys
+sys.path.append('../')
+import net.config as config
 
-DATA_DIR = "./tfrecord"
-TRAINING_SET_SIZE = 2512
-BATCH_SIZE = 16
-IMAGE_SIZE = 224
+
+
+FLAGS = tf.app.flags.FLAGS
+DATA_DIR = FLAGS.train_data_path
+TRAINING_SET_SIZE = FLAGS.TRAINING_SET_SIZE
+BATCH_SIZE = FLAGS.BATCH_SIZE
+IMAGE_SIZE = FLAGS.IMAGE_SIZE
+
 
 
 def _int64_feature(value):
@@ -25,7 +32,6 @@ def _int64_feature(value):
 
 def _bytes_feature(value):
     return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
-
 
 
 # image object from tfrecord

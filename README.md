@@ -1,11 +1,6 @@
 # DenseNet-Tensorflow
-An refactor of densenet in low level tensorflow.
+A refactor of densenet in low level tensorflow API.
 
-Current model is DenseNet-BC-121 with 224 input image size.
-
-Still under construction.
-
-## Feature
 No tf.slim
 
 No tf.layers
@@ -14,6 +9,11 @@ No tf.contrib
 
 No opencv
 
+Current graph is based on DenseNet-BC-121 with 224 input image size.
+
+Can train and test from scratch, other features are still under construction.
+
+## Feature
 Support tfrecord
 
 With minimum dependencies
@@ -50,6 +50,8 @@ tensorboard --logdir=./log
 ```python
 python test.py
 ```
+
+Expected accuracy should be around 80%.
 ## Reference
 [Densely Connected Convolutional Networks](https://arxiv.org/abs/1608.06993)
 
