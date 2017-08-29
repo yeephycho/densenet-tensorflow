@@ -194,6 +194,7 @@ def densenet_inference(image_batch, if_training, dropout_prob):
 
             h_fc3 = tf.nn.relu(tf.matmul(h_fc2, W_fc3) + b_fc3)
 
+
     return h_fc3
 
 
