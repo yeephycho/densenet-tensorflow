@@ -45,13 +45,13 @@ def densenet_train():
     total_loss = regularzation_loss + loss
     tf.summary.scalar('total_loss', total_loss)
 
-    global_step = tf.Variable(0, trainable=False)
+    global_step = tf.Variable(0, name='global_step', trainable=False)
     current_step = tf.assign(global_step, global_step + 1)
     starter_learning_rate = 0.001
     learning_rate = tf.train.exponential_decay(learning_rate=starter_learning_rate,
                                                global_step=current_step,
-                                               decay_steps=1000,
-                                               decay_rate=0.2,
+                                               decay_steps=2000,
+                                               decay_rate=0.5,
                                                staircase=True)
     tf.summary.scalar('learning_rate', learning_rate)
 
