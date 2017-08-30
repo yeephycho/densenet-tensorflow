@@ -1,5 +1,5 @@
 # DenseNet-Tensorflow
-A refactor of densenet in low level tensorflow API.
+An implementation of densenet in low level tensorflow API. Focus on performance, scalability and stability.
 
 No tf.slim
 
@@ -9,9 +9,11 @@ No tf.contrib
 
 No opencv
 
-Current graph is a variation of DenseNet-BC-121 with 224 input image size, there's only 52 convolutional layers.
+Current graph is a variation of DenseNet-BC-121 with 224 input image size, the difference is that there's 52 convolutional layers in this implementation.
 
-Can train and test from scratch, other features are still under construction.
+With this repo., you are able to train and test the architecture from scratch.
+
+More sophisticated features are still under construction.
 
 ## Feature
 Support tfrecord
