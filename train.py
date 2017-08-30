@@ -29,10 +29,9 @@ def densenet_train():
     label_batch_placeholder = tf.placeholder(tf.float32, shape=[None, 5])
     if_training_placeholder = tf.placeholder(tf.bool, shape=[])
 
-    if_training = tf.Variable(True, name='if_training')
-    # if_training = tf.constant(True, dtype=tf.bool, shape=None, name='if_training', verify_shape=False)
-
     image_batch, label_batch, filename_batch = data_provider.feed_data(if_random = True, if_training = True)
+
+    if_training = tf.Variable(True, name='if_training')
 
     logits = densenet.densenet_inference(image_batch_placeholder, if_training_placeholder, dropout_prob=0.7)
 

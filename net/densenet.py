@@ -103,25 +103,26 @@ def dense_block(_input_tensor, growth_rate, if_training):
 
     with tf.name_scope("bottleneck_1") as scope:
         _bottlenect_output_1 = bottleneck_layer(_bottleneck_input_0, growth_rate, if_training)#NOTE:96 = 64 + 32
-        _bottleneck_input_1 = tf.concat(values=[_input_tensor, _bottleneck_output_0, _bottlenect_output_1], axis=3, name='stack1')# 128
+        _bottleneck_input_1 = tf.concat(values=[_bottleneck_input_0, _bottlenect_output_1], axis=3, name='stack1')# 128
 
     with tf.name_scope("bottleneck_2") as scope:
         _bottlenect_output_2 = bottleneck_layer(_bottleneck_input_1, growth_rate, if_training)#NOTE:128 = 96 + 32
-        _bottleneck_input_2 = tf.concat(values=[_input_tensor, _bottleneck_output_0, _bottlenect_output_1, _bottlenect_output_2], axis=3, name='stack2')# 160
+        _bottleneck_input_2 = tf.concat(values=[_bottleneck_input_1, _bottlenect_output_2], axis=3, name='stack2')# 160
 
     with tf.name_scope("bottleneck_3") as scope:
         _bottlenect_output_3 = bottleneck_layer(_bottleneck_input_2, growth_rate, if_training)#NOTE:160 = 128 + 32
-        _bottleneck_input_3 = tf.concat(values=[_input_tensor, _bottleneck_output_0, _bottlenect_output_1, _bottlenect_output_2, _bottlenect_output_3], axis=3, name='stack3')# 192
+        _bottleneck_input_3 = tf.concat(values=[_bottleneck_input_2, _bottlenect_output_3], axis=3, name='stack3')# 192
 
     with tf.name_scope("bottleneck_4") as scope:
         _bottlenect_output_4 = bottleneck_layer(_bottleneck_input_3, growth_rate, if_training)#NOTE:192 = 160 + 32
-        _bottleneck_input_4 = tf.concat(values=[_input_tensor, _bottleneck_output_0, _bottlenect_output_1, _bottlenect_output_2, _bottlenect_output_3, _bottlenect_output_4], axis=3, name='stack4')# 224
+        _bottleneck_input_4 = tf.concat(values=[_bottleneck_input_3, _bottlenect_output_4], axis=3, name='stack4')# 224
 
     with tf.name_scope("bottleneck_5") as scope:
         _bottlenect_output_5 = bottleneck_layer(_bottleneck_input_4, growth_rate, if_training)#NOTE:192 = 160 + 32
-        output_tensor = tf.concat(values=[_input_tensor, _bottleneck_output_0, _bottlenect_output_1, _bottlenect_output_2, _bottlenect_output_3, _bottlenect_output_4, _bottlenect_output_5], axis=3, name='stack5')
+        output_tensor = tf.concat(values=[_bottleneck_input_4, _bottlenect_output_5], axis=3, name='stack5')
 
     return output_tensor
+
 
 
 def densenet_inference(image_batch, if_training, dropout_prob):
@@ -165,26 +166,18 @@ def densenet_inference(image_batch, if_training, dropout_prob):
 
 
         with tf.name_scope('fc'):
-            W_fc1 = weight_variable([368, 128])
-            b_fc1 = bias_variable([128])
+            W_fc0 = weight_variable([368, 128])
+            b_fc0 = bias_variable([128])
+            _output_tensor = tf.reshape(_output_tensor, [-1, 368])
+            _output_tensor = tf.nn.relu(tf.matmul(_output_tensor, W_fc0) + b_fc0)
 
-            h_pool5_flat = tf.reshape(_output_tensor, [-1, 368])
-            h_fc1 = tf.nn.relu(tf.matmul(h_pool5_flat, W_fc1) + b_fc1)
+            _output_tensor = tf.nn.dropout(_output_tensor, dropout_prob)
 
-            h_fc1_drop = tf.nn.dropout(h_fc1, dropout_prob)
+            W_fc1 = weight_variable([128, 5])
+            b_fc1 = bias_variable([5])
+            _output_tensor = tf.nn.relu(tf.matmul(_output_tensor, W_fc1) + b_fc1)
 
-            W_fc2 = weight_variable([128, 32])
-            b_fc2 = bias_variable([32])
-
-            h_fc2 = tf.nn.relu(tf.matmul(h_fc1_drop, W_fc2) + b_fc2)
-
-            W_fc3 = weight_variable([32, 5])
-            b_fc3 = bias_variable([5])
-
-            h_fc3 = tf.nn.relu(tf.matmul(h_fc2, W_fc3) + b_fc3)
-
-
-    return h_fc3
+    return _output_tensor
 
 
 # # from cifar10 example @ https://github.com/tensorflow/models/blob/master/tutorials/image/cifar10/cifar10.py

@@ -48,9 +48,11 @@ tensorboard --logdir=./log
 ```
 
 5. Test model:
+A pre-trained model can be download [here](https://drive.google.com/drive/folders/0BwTYOWiLy2btUmRoT0RvWWJyOWM?usp=sharing). Put the models folder under this project folder. Then
 ```python
 python test.py
 ```
+Hopefully the pre-trained model should give you a precision of 80.3%.
 
 Expected accuracy should be around 80%.
 ![Result](https://github.com/yeephycho/densenet-tensorflow/blob/master/res/test_result.png?raw=true "Show result")
