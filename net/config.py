@@ -14,4 +14,5 @@ tf.app.flags.DEFINE_integer("TRAINING_SET_SIZE", 2512, "total image number of tr
 tf.app.flags.DEFINE_integer("TESTING_SET_SIZE", 908, "total image number of training set")
 tf.app.flags.DEFINE_integer("BATCH_SIZE", 16, "batch size")
 tf.app.flags.DEFINE_integer("IMAGE_SIZE", 224, "image width and height")
-tf.app.flags.DEFINE_float("INIT_LEARNING_RATE", 0.001, "initial learning rate")
+tf.app.flags.DEFINE_float("INIT_LEARNING_RATE", 0.005, "initial learning rate")
+tf.app.flags.DEFINE_float("weights_decay", 0.0001, "weights decay serve as l2 regularizer")

@@ -10,22 +10,24 @@ from __future__ import print_function
 
 import tensorflow as tf
 import numpy as np
+from . import config as config
 
 
+FLAGS = tf.app.flags.FLAGS
+weights_decay = FLAGS.weights_decay
 
-def weight_variable(shape):
-    initial = tf.truncated_normal(shape, stddev=0.05)
-    return tf.Variable(initial)
 
-def bias_variable(shape):
-    initial = tf.constant(0.02, shape=shape)
-    return tf.Variable(initial)
+def _weight_variable_truncated_norm(shape):
+    return tf.Variable(tf.truncated_normal(shape, stddev=0.05))
 
-def conv2d(x, W):
-    return tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME')
+def _weight_variable_constant(shape):
+    return tf.Variable(tf.constant(0.02, shape=shape))
 
-def max_pool_2x2(x):
-    return tf.nn.max_pool(x, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+def _weight_variable_with_decay(shape):
+    var = tf.Variable(tf.truncated_normal(shape, stddev=0.05))
+    weight_decay = tf.multiply(tf.nn.l2_loss(var), weights_decay, name='weight_loss')
+    tf.add_to_collection('regularzation_loss', weight_decay)
+    return var
 
 
 
@@ -65,7 +67,7 @@ def batch_norm(input_tensor, if_training):
 
 def composite_function(__input_tensor, growth_rate, if_training):
     __input_tensor_depth = int(__input_tensor.get_shape()[-1])
-    __conv_weights = weight_variable([3, 3, __input_tensor_depth, growth_rate])
+    __conv_weights = _weight_variable_with_decay([3, 3, __input_tensor_depth, growth_rate])
     __output_tensor = batch_norm(__input_tensor, if_training)
     __output_tensor = tf.nn.relu(__output_tensor)
     __output_tensor = tf.nn.conv2d(input=__output_tensor, filter=__conv_weights, strides=[1, 1, 1, 1], padding='SAME', data_format='NHWC', name='composite_3x3_s1')
@@ -75,7 +77,7 @@ def composite_function(__input_tensor, growth_rate, if_training):
 
 def transition_layer(__input_tensor, theta, if_training):
     __input_tensor_depth = int(__input_tensor.get_shape()[-1])
-    __conv_weights = weight_variable([1, 1, __input_tensor_depth, int(theta * __input_tensor_depth)])
+    __conv_weights = _weight_variable_with_decay([1, 1, __input_tensor_depth, int(theta * __input_tensor_depth)])
     __output_tensor = batch_norm(__input_tensor, if_training)
     __output_tensor = tf.nn.conv2d(input=__output_tensor, filter=__conv_weights, strides=[1, 1, 1, 1], padding='SAME', data_format='NHWC', name='transition_1x1_s1')
     __output_tensor = tf.nn.avg_pool(value=__output_tensor, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME', data_format='NHWC', name='avg_pool_2x2')
@@ -85,7 +87,7 @@ def transition_layer(__input_tensor, theta, if_training):
 
 def bottleneck_layer(_input_tensor, growth_rate, if_training):
     __input_tensor_depth = int(_input_tensor.get_shape()[-1])
-    __conv_weights = weight_variable([1, 1, __input_tensor_depth, 4 * growth_rate]) #NOTE: output_tensor should be 4k, 4 times of the growth_rate
+    __conv_weights = _weight_variable_with_decay([1, 1, __input_tensor_depth, 4 * growth_rate]) #NOTE: output_tensor should be 4k, 4 times of the growth_rate
     __output_tensor = batch_norm(_input_tensor, if_training)
     __output_tensor = tf.nn.relu(__output_tensor)
     __output_tensor = tf.nn.conv2d(input=__output_tensor, filter=__conv_weights, strides=[1, 1, 1, 1], padding='SAME', data_format='NHWC', name='bottleneck_1x1_s1')
@@ -130,7 +132,7 @@ def densenet_inference(image_batch, if_training, dropout_prob):
         _image_batch = tf.reshape(image_batch, [-1, 224, 224, 3])
 
         with tf.name_scope('conv2d_7x7_s2') as scope:
-            _conv_weights = weight_variable([7, 7, 3, 64])
+            _conv_weights = _weight_variable_with_decay([7, 7, 3, 64])
             _output_tensor = tf.nn.conv2d(input=_image_batch, filter=_conv_weights, strides=[1, 2, 2, 1], padding='SAME', data_format='NHWC', name='conv2d_7x7_s2')
             _output_tensor = tf.nn.max_pool(value=_output_tensor, ksize=[1, 3, 3, 1], strides=[1, 2, 2, 1], padding='SAME', data_format='NHWC', name='max_pool_3x3_s2')
             _output_tensor = tf.nn.relu(_output_tensor)
@@ -166,54 +168,15 @@ def densenet_inference(image_batch, if_training, dropout_prob):
 
 
         with tf.name_scope('fc'):
-            W_fc0 = weight_variable([368, 128])
-            b_fc0 = bias_variable([128])
+            W_fc0 = _weight_variable_with_decay([368, 128])
+            b_fc0 = _weight_variable_constant([128])
             _output_tensor = tf.reshape(_output_tensor, [-1, 368])
             _output_tensor = tf.nn.relu(tf.matmul(_output_tensor, W_fc0) + b_fc0)
 
             _output_tensor = tf.nn.dropout(_output_tensor, dropout_prob)
 
-            W_fc1 = weight_variable([128, 5])
-            b_fc1 = bias_variable([5])
+            W_fc1 = _weight_variable_with_decay([128, 5])
+            b_fc1 = _weight_variable_constant([5])
             _output_tensor = tf.nn.relu(tf.matmul(_output_tensor, W_fc1) + b_fc1)
 
     return _output_tensor
-
-
-# # from cifar10 example @ https://github.com/tensorflow/models/blob/master/tutorials/image/cifar10/cifar10.py
-# def _variable_on_gpu(name, shape, initializer):
-#   """Helper to create a Variable stored on CPU memory.
-#   Args:
-#     name: name of the variable
-#     shape: list of ints
-#     initializer: initializer for Variable
-#   Returns:
-#     Variable Tensor
-#   """
-#   with tf.device('/gpu:0'):
-#     dtype = tf.float32
-#     var = tf.get_variable(name, shape, initializer=initializer, dtype=dtype)
-#   return var
-#
-# def _variable_with_weight_decay(name, shape, stddev, wd):
-#   """Helper to create an initialized Variable with weight decay.
-#   Note that the Variable is initialized with a truncated normal distribution.
-#   A weight decay is added only if one is specified.
-#   Args:
-#     name: name of the variable
-#     shape: list of ints
-#     stddev: standard deviation of a truncated Gaussian
-#     wd: add L2Loss weight decay multiplied by this float. If None, weight
-#         decay is not added for this Variable.
-#   Returns:
-#     Variable Tensor
-#   """
-#   dtype = tf.float32
-#   var = _variable_on_gpu(
-#       name,
-#       shape,
-#       tf.truncated_normal_initializer(stddev=stddev, dtype=dtype))
-#   if wd is not None:
-#     weight_decay = tf.multiply(tf.nn.l2_loss(var), wd, name='weight_loss')
-#     tf.add_to_collection('losses', weight_decay)
-#   return var

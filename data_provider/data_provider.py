@@ -37,11 +37,11 @@ def _bytes_feature(value):
 # image object from tfrecord
 class _image_object:
     def __init__(self):
-        self.image = tf.Variable([], dtype = tf.string)
-        self.height = tf.Variable([], dtype = tf.int64)
-        self.width = tf.Variable([], dtype = tf.int64)
-        self.filename = tf.Variable([], dtype = tf.string)
-        self.label = tf.Variable([], dtype = tf.int32)
+        self.image = tf.Variable([], dtype = tf.string, trainable=False)
+        self.height = tf.Variable([], dtype = tf.int64, trainable=False)
+        self.width = tf.Variable([], dtype = tf.int64, trainable=False)
+        self.filename = tf.Variable([], dtype = tf.string, trainable=False)
+        self.label = tf.Variable([], dtype = tf.int32, trainable=False)
 
 def read_and_decode(filename_queue):
     with tf.name_scope('data_provider'):

@@ -32,7 +32,7 @@ def densenet_test():
     image_batch, label_batch, filename_batch = data_provider.feed_data(if_random = False, if_training = False)
     label_batch_dense = tf.arg_max(label_batch, dimension = 1)
 
-    if_training = tf.Variable(False, name='if_training')
+    if_training = tf.Variable(False, name='if_training', trainable=False)
 
     logits = tf.reshape(densenet.densenet_inference(image_batch_placeholder, if_training_placeholder, 1.0), [BATCH_SIZE, 5])
     logits_batch = tf.to_int64(tf.arg_max(logits, dimension = 1))

@@ -31,7 +31,7 @@ def densenet_train():
 
     image_batch, label_batch, filename_batch = data_provider.feed_data(if_random = True, if_training = True)
 
-    if_training = tf.Variable(True, name='if_training')
+    if_training = tf.Variable(True, name='if_training', trainable=False)
 
     logits = densenet.densenet_inference(image_batch_placeholder, if_training_placeholder, dropout_prob=0.7)
 
@@ -39,17 +39,23 @@ def densenet_train():
     #loss = tf.losses.mean_squared_error(labels=label_batch_placeholder, predictions=logits)
     tf.summary.scalar('loss', loss) # create a summary for training loss
 
+    regularzation_loss = sum(tf.get_collection("regularzation_loss"))
+    tf.summary.scalar('regularzation_loss', regularzation_loss)
+
+    total_loss = regularzation_loss + loss
+    tf.summary.scalar('total_loss', total_loss)
+
     global_step = tf.Variable(0, trainable=False)
-    current_step = tf.assign(global_step, global_step+1)
+    current_step = tf.assign(global_step, global_step + 1)
     starter_learning_rate = 0.001
     learning_rate = tf.train.exponential_decay(learning_rate=starter_learning_rate,
                                                global_step=current_step,
-                                               decay_steps=3000,
-                                               decay_rate=0.6,
+                                               decay_steps=1000,
+                                               decay_rate=0.2,
                                                staircase=True)
     tf.summary.scalar('learning_rate', learning_rate)
 
-    train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss)
+    train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(total_loss)
 
     summary_op = tf.summary.merge_all()  # merge all summaries into a single "operation" which we can execute in a session
 
@@ -58,7 +64,6 @@ def densenet_train():
     config = tf.ConfigProto()
     config.gpu_options.allow_growth=True
     sess = tf.Session(config=config)
-    # sess = tf.Session()
 
     summary_writer = tf.summary.FileWriter("./log", sess.graph)
 
@@ -104,3 +109,12 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
+# weights = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+# print("")
+# for w in weights:
+#     shp = w.get_shape().as_list()
+#     print("- {} shape:{} size:{}".format(w.name, shp, np.prod(shp)))
+# print("")
