@@ -21,6 +21,9 @@ import data_provider.data_provider as data_provider
 FLAGS = tf.app.flags.FLAGS
 TRAINING_SET_SIZE = FLAGS.TRAINING_SET_SIZE
 BATCH_SIZE = FLAGS.BATCH_SIZE
+starter_learning_rate = FLAGS.INIT_LEARNING_RATE
+exp_decay_steps = FLAGS.DECAY_STEPS
+exp_decay_rate = FLAGS.DECAY_RATE
 
 
 
@@ -46,16 +49,15 @@ def densenet_train():
     tf.summary.scalar('total_loss', total_loss)
 
     global_step = tf.Variable(0, name='global_step', trainable=False)
-    current_step = tf.assign(global_step, global_step + 1)
-    starter_learning_rate = 0.001
+
     learning_rate = tf.train.exponential_decay(learning_rate=starter_learning_rate,
-                                               global_step=current_step,
-                                               decay_steps=2000,
-                                               decay_rate=0.5,
+                                               global_step=global_step,
+                                               decay_steps=exp_decay_steps,
+                                               decay_rate=exp_decay_rate,
                                                staircase=True)
     tf.summary.scalar('learning_rate', learning_rate)
 
-    train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(total_loss)
+    train_step = tf.train.GradientDescentOptimizer(learning_rate).minimize(loss=total_loss, global_step=global_step)
 
     summary_op = tf.summary.merge_all()  # merge all summaries into a single "operation" which we can execute in a session
 
@@ -82,17 +84,18 @@ def densenet_train():
         for check_point in range(check_points):
             image_batch_train, label_batch_train, filename_train = sess.run([image_batch, label_batch, filename_batch])
 
-            _, training_loss, summary, _current_step = sess.run([train_step, loss, summary_op, current_step],
+            _, training_loss, _global_step, summary = sess.run([train_step, loss, global_step, summary_op],
                                                  feed_dict={image_batch_placeholder: image_batch_train,
                                                             label_batch_placeholder: label_batch_train,
                                                             if_training_placeholder: if_training})
 
             if(bool(check_point%50 == 0) & bool(check_point != 0)):
+                print(_)
                 print("batch: ", check_point + epoch * check_points)
                 print("training loss: ", training_loss)
-                summary_writer.add_summary(summary, _current_step)
+                summary_writer.add_summary(summary, _global_step)
 
-        saver.save(sess, "./models/densenet.ckpt", _current_step)
+        saver.save(sess, "./models/densenet.ckpt", _global_step)
 
     coord.request_stop()
     coord.join(threads)

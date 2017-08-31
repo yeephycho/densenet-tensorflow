@@ -66,7 +66,7 @@ def read_and_decode(filename_queue):
 
 
 def feed_data(if_random = True, if_training = True):
-    with tf.name_scope('image_reader_and_preprocessor'):
+    with tf.name_scope('image_reader_and_preprocessor') as scope:
         if(if_training):
             filenames = [os.path.join(DATA_DIR, "train.tfrecord")]
         else:
@@ -89,11 +89,12 @@ def feed_data(if_random = True, if_training = True):
         label = image_object.label
         filename = image_object.filename
 
+        num_preprocess_threads = 2
+
         if(if_random):
             min_fraction_of_examples_in_queue = 0.4
             min_queue_examples = int(TRAINING_SET_SIZE * min_fraction_of_examples_in_queue)
-            print("Filling queue with %d images before starting to train. " "This will take a few minutes." % min_queue_examples)
-            num_preprocess_threads = 2
+            print("Filling queue with %d images before starting to train. " "This will take some time." % min_queue_examples)
             image_batch, label_batch, filename_batch = tf.train.shuffle_batch(
                 [image, label, filename],
                 batch_size = BATCH_SIZE,
@@ -107,7 +108,7 @@ def feed_data(if_random = True, if_training = True):
             image_batch, label_batch, filename_batch = tf.train.batch(
                 [image, label, filename],
                 batch_size = BATCH_SIZE,
-                num_threads = 1)
+                num_threads = num_preprocess_threads)
             image_batch = tf.reshape(image_batch, (BATCH_SIZE, IMAGE_SIZE, IMAGE_SIZE, 3))
             label_offset = -tf.ones([BATCH_SIZE], dtype=tf.int64, name="label_batch_offset")
             label_batch = tf.one_hot(tf.add(label_batch, label_offset), depth=5, on_value=1.0, off_value=0.0)
