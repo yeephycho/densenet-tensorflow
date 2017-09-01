@@ -68,6 +68,8 @@ def densenet_test():
 
         print(accuracy_accu / TEST_SET_SIZE * BATCH_SIZE)
 
+        tf.train.write_graph(sess.graph_def, 'graph/', 'my_graph.pb', as_text=False)
+
         coord.request_stop()
         coord.join(threads)
         sess.close()

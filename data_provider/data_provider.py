@@ -56,7 +56,8 @@ def read_and_decode(filename_queue):
         image_encoded = features["image/encoded"]
         image_raw = tf.image.decode_jpeg(image_encoded, channels=3)
         image_object = _image_object()
-        image_object.image = tf.image.resize_image_with_crop_or_pad(image_raw, IMAGE_SIZE, IMAGE_SIZE)
+        # image_object.image = tf.image.resize_image_with_crop_or_pad(image_raw, IMAGE_SIZE, IMAGE_SIZE)
+        image_object.image = tf.image.resize_images(image_raw, [IMAGE_SIZE, IMAGE_SIZE], method=0, align_corners=True)
         image_object.height = features["image/height"]
         image_object.width = features["image/width"]
         image_object.filename = features["image/filename"]
@@ -89,7 +90,10 @@ def feed_data(if_random = True, if_training = True):
         label = image_object.label
         filename = image_object.filename
 
-        num_preprocess_threads = 2
+        if(if_training):
+            num_preprocess_threads = 2
+        else:
+            num_preprocess_threads = 1
 
         if(if_random):
             min_fraction_of_examples_in_queue = 0.4
