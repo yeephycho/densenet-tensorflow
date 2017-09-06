@@ -14,8 +14,7 @@ import numpy as np
 import os
 
 import sys
-sys.path.append('../')
-import net.config as config
+import config as config
 
 
 

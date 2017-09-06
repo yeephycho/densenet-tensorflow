@@ -13,7 +13,7 @@ import numpy as np
 import os
 
 import net.densenet as densenet
-import net.config as config
+import config as config
 import data_provider.data_provider as data_provider
 
 

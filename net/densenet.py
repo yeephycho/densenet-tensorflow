@@ -10,7 +10,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 import numpy as np
-from . import config as config
+import config as config
 
 
 FLAGS = tf.app.flags.FLAGS
